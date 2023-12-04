@@ -3,13 +3,14 @@ using UnityEngine;
 public class FirstPersonController : MonoBehaviour
 {
     public float walkSpeed = 5.0f;
+    public float sprintSpeed = 10.0f;
     public float jumpForce = 5.0f;
-    public float Mousesensitivity = 2.0f;
+    public float mouseSensitivity = 2.0f;
     public Camera playerCamera;
     private Rigidbody rb;
 
-    private float Forward;
-    private float Sideways;
+    private float forward;
+    private float sideways;
     private float rotateX;
     private float rotateY;
 
@@ -23,13 +24,20 @@ public class FirstPersonController : MonoBehaviour
 
     void Update()
     {
-        Forward = Input.GetAxis("Vertical") * walkSpeed * Time.deltaTime; // Basic movement of the player for X and Z axis
-        Sideways = Input.GetAxis("Horizontal") * walkSpeed * Time.deltaTime;
+        float currentSpeed = walkSpeed;
 
-        transform.Translate(Sideways, 0, Forward);
+        if (Input.GetKey(KeyCode.LeftShift)) // Sprint if holding shift key
+        {
+            currentSpeed = sprintSpeed;
+        }
 
-        rotateX = Input.GetAxis("Mouse X") * Mousesensitivity; // For rotating the camera
-        rotateY -= Input.GetAxis("Mouse Y") * Mousesensitivity;
+        forward = Input.GetAxis("Vertical") * currentSpeed * Time.deltaTime; // Basic movement of the player for X and Z axis
+        sideways = Input.GetAxis("Horizontal") * currentSpeed * Time.deltaTime;
+
+        transform.Translate(sideways, 0, forward);
+
+        rotateX = Input.GetAxis("Mouse X") * mouseSensitivity; // For rotating the camera
+        rotateY -= Input.GetAxis("Mouse Y") * mouseSensitivity;
         rotateY = Mathf.Clamp(rotateY, -60f, 60f);
 
         playerCamera.transform.localRotation = Quaternion.Euler(rotateY, 0, 0);
