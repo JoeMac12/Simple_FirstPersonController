@@ -23,6 +23,8 @@ public class FirstPersonController : MonoBehaviour
 
     private bool isCrouching = false; // Used to check if the player is crouching
 
+    public LayerMask obstructionLayer; // Used for uncrouch checking
+
     Vector3 moveDirection = Vector3.zero;
     CharacterController characterController;
 
@@ -61,10 +63,26 @@ public class FirstPersonController : MonoBehaviour
             moveDirection.y -= gravity * Time.deltaTime;
         }
 
-        if (Input.GetKeyDown(KeyCode.C)) // Toggle crouching
+        if (Input.GetKeyDown(KeyCode.C)) // Toggle crouching and check if can uncrouch
         {
-            isCrouching = !isCrouching;
-            characterController.height = isCrouching ? crouchHeight : standHeight;
+            if (isCrouching && CanUncrouch())
+            {
+                isCrouching = false;
+                characterController.height = standHeight;
+            }
+            else if (!isCrouching)
+            {
+                isCrouching = true;
+                characterController.height = crouchHeight;
+            }
+        }
+
+        bool CanUncrouch() // Use a raycast and layer check to see if the player can uncrouch
+        {
+        float checkDistance = standHeight - characterController.height;
+        Vector3 rayOrigin = transform.position + characterController.center;
+        bool isObstructed = Physics.Raycast(rayOrigin, Vector3.up, checkDistance, obstructionLayer);
+        return !isObstructed;
         }
 
         characterController.Move(moveDirection * Time.deltaTime);
