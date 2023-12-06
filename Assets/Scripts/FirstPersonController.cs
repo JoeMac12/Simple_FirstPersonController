@@ -1,52 +1,78 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class FirstPersonController : MonoBehaviour
 {
-    public float walkSpeed = 5.0f;
-    public float sprintSpeed = 10.0f;
-    public float jumpForce = 5.0f;
-    public float mouseSensitivity = 2.0f;
-    public Camera playerCamera;
-    private Rigidbody rb;
+    public Camera playerCamera; // Camera object
 
-    private float forward;
-    private float sideways;
-    private float rotateX;
-    private float rotateY;
+    public float walkSpeed = 5f; // Values for player movement
+    public float sprintSpeed = 8f;
+    public float crouchSpeed = 2f;
+    public float jumpPower = 8f;
 
-    private bool isGrounded; // For ground checking
+    private float standHeight; // To store the original height
+    public float crouchHeight = 1f; // Height of character controller while crouching
+
+    public float gravity = 15f;
+
+    public float mouseSensitivity = 2f; // Values for camera movement
+    public float cameraLimit = 75f; // Limits how high or low you can look
+
+    float rotationX = 0; // For camera rotation
+
+    private bool isCrouching = false; // Used to check if the player is crouching
+
+    Vector3 moveDirection = Vector3.zero;
+    CharacterController characterController;
 
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked; // Lock the cursor
-        rb = GetComponent<Rigidbody>();
+        characterController = GetComponent<CharacterController>();
+        standHeight = characterController.height; // Store stand height for crouching height change
+
+        Cursor.lockState = CursorLockMode.Locked; // Lock cursor and hide it
+        Cursor.visible = false;
     }
 
     void Update()
     {
-        float currentSpeed = walkSpeed;
+        float speed = (isCrouching ? crouchSpeed : (Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed)); // Toggle sprinting when holding left shift
 
-        if (Input.GetKey(KeyCode.LeftShift)) // Sprint if holding shift key
+        Vector3 forward = transform.TransformDirection(Vector3.forward);
+        Vector3 right = transform.TransformDirection(Vector3.right);
+
+        float moveX = speed * Input.GetAxis("Vertical");
+        float moveY = speed * Input.GetAxis("Horizontal");
+        float movementDirectionY = moveDirection.y;
+        moveDirection = (forward * moveX) + (right * moveY);
+
+        if (Input.GetButton("Jump") && characterController.isGrounded) // Make the player jump
         {
-            currentSpeed = sprintSpeed;
+            moveDirection.y = jumpPower;
+        }
+        else
+        {
+            moveDirection.y = movementDirectionY; // Normal y movement
         }
 
-        forward = Input.GetAxis("Vertical") * currentSpeed * Time.deltaTime; // Basic movement of the player for X and Z axis
-        sideways = Input.GetAxis("Horizontal") * currentSpeed * Time.deltaTime;
-
-        transform.Translate(sideways, 0, forward);
-
-        rotateX = Input.GetAxis("Mouse X") * mouseSensitivity; // For rotating the camera
-        rotateY -= Input.GetAxis("Mouse Y") * mouseSensitivity;
-        rotateY = Mathf.Clamp(rotateY, -60f, 60f);
-
-        playerCamera.transform.localRotation = Quaternion.Euler(rotateY, 0, 0);
-        transform.Rotate(0, rotateX, 0);
-
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f); // Player jumping
-        if (isGrounded && Input.GetKeyDown(KeyCode.Space))
+        if (!characterController.isGrounded) // Used to check if the player is on the ground
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            moveDirection.y -= gravity * Time.deltaTime;
         }
+
+        if (Input.GetKeyDown(KeyCode.C)) // Toggle crouching
+        {
+            isCrouching = !isCrouching;
+            characterController.height = isCrouching ? crouchHeight : standHeight;
+        }
+
+        characterController.Move(moveDirection * Time.deltaTime);
+
+        rotationX += -Input.GetAxis("Mouse Y") * mouseSensitivity; // Allow the player to look around
+        rotationX = Mathf.Clamp(rotationX, -cameraLimit, cameraLimit);
+
+        playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+        transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * mouseSensitivity, 0);
     }
 }
